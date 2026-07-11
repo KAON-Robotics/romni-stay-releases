@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Romni Stay 릴리즈 노트</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1f2328;
+    --text-soft: #59636e;
+    --border: #d1d9e0;
+    --accent: #0a5c3e;
+    --accent-soft: #e6f2ec;
+    --beta-bg: #fff3e0;
+    --beta-text: #9a5b00;
+    --card-bg: #f8f9fa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a;
+      --text: #e6e9ec;
+      --text-soft: #9aa4ae;
+      --border: #30383f;
+      --accent: #5cc199;
+      --accent-soft: #16281f;
+      --beta-bg: #2e2313;
+      --beta-text: #e0a94f;
+      --card-bg: #1b1f23;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 48px 20px 80px; }
+
+  header h1 { margin: 0 0 6px; font-size: 1.7rem; letter-spacing: -0.02em; }
+  header p { margin: 0; color: var(--text-soft); font-size: 0.95rem; }
+
+  .release { border-top: 1px solid var(--border); margin-top: 40px; padding-top: 32px; }
+  .release:first-of-type { border-top: none; margin-top: 24px; }
+
+  .release-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .release-head h2 { margin: 0; font-size: 1.3rem; letter-spacing: -0.01em; }
+  .release-date { color: var(--text-soft); font-size: 0.88rem; }
+  .badge {
+    font-size: 0.72rem; font-weight: 600; padding: 2px 9px;
+    border-radius: 999px; white-space: nowrap;
+  }
+  .badge-latest { background: var(--accent-soft); color: var(--accent); }
+  .badge-beta { background: var(--beta-bg); color: var(--beta-text); }
+
+  .release-body { margin-top: 14px; }
+  .release-body h3 {
+    margin: 26px 0 10px; font-size: 1.02rem; color: var(--text-soft);
+    text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;
+  }
+  .release-body h4 { margin: 20px 0 6px; font-size: 1rem; }
+  .release-body p { margin: 8px 0; }
+  .release-body ul { margin: 8px 0; padding-left: 22px; }
+  .release-body li { margin: 4px 0; }
+  .release-body code {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px; font-size: 0.86em;
+  }
+  .release-body a { color: var(--accent); }
+
+  .state { margin-top: 48px; color: var(--text-soft); text-align: center; }
+  .state a { color: var(--accent); }
+
+  footer { margin-top: 64px; border-top: 1px solid var(--border); padding-top: 20px; }
+  footer p { color: var(--text-soft); font-size: 0.85rem; margin: 0; }
+  footer a { color: var(--text-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Romni Stay 릴리즈 노트</h1>
+    <p>서버와 Admin·Staff·User 앱을 아우르는 제품 단위 변경 사항입니다.</p>
+  </header>
+
+  <main id="app"><div class="state">불러오는 중…</div></main>
+
+  <footer>
+    <p>KAON Robotics · <a href="https://github.com/KAON-Robotics/romni-stay-releases/releases">GitHub Releases에서 보기</a></p>
+  </footer>
+</div>
+
+<script>
+const REPO = 'KAON-Robotics/romni-stay-releases';
+const app = document.getElementById('app');
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function inline(s) {
+  return s
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+
+/* 릴리즈 노트에서 실제로 쓰는 요소(제목·목록·문단·볼드·코드·링크)만 지원하는 최소 렌더러.
+   본문을 먼저 HTML 이스케이프하므로 노트에 태그가 섞여 있어도 그대로 문자로 표시된다. */
+function renderMarkdown(md) {
+  const lines = escapeHtml(md.replace(/\r\n/g, '\n')).split('\n');
+  let html = '', inList = false, para = [];
+  const flushPara = () => { if (para.length) { html += '<p>' + inline(para.join(' ')) + '</p>'; para = []; } };
+  const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { flushPara(); closeList(); continue; }
+    if (line.startsWith('### ')) { flushPara(); closeList(); html += '<h4>' + inline(line.slice(4)) + '</h4>'; continue; }
+    if (line.startsWith('## '))  { flushPara(); closeList(); html += '<h3>' + inline(line.slice(3)) + '</h3>'; continue; }
+    if (line.startsWith('# '))   { flushPara(); closeList(); html += '<h3>' + inline(line.slice(2)) + '</h3>'; continue; }
+    if (line.startsWith('- ')) {
+      flushPara();
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += '<li>' + inline(line.slice(2)) + '</li>';
+      continue;
+    }
+    para.push(line);
+  }
+  flushPara(); closeList();
+  return html;
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
+}
+
+async function load() {
+  let releases;
+  try {
+    const res = await fetch('https://api.github.com/repos/' + REPO + '/releases?per_page=50');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    releases = await res.json();
+  } catch (e) {
+    app.innerHTML = '<div class="state">목록을 불러오지 못했습니다. 잠시 후 새로고침하거나 ' +
+      '<a href="https://github.com/' + REPO + '/releases">GitHub Releases</a>에서 직접 확인해주세요.</div>';
+    return;
+  }
+
+  const visible = releases.filter(r => !r.draft);
+  if (!visible.length) {
+    app.innerHTML = '<div class="state">아직 게시된 릴리즈가 없습니다.</div>';
+    return;
+  }
+
+  const latestId = (visible.find(r => !r.prerelease) || {}).id;
+  app.innerHTML = visible.map(r => {
+    const badges =
+      (r.id === latestId ? '<span class="badge badge-latest">최신</span>' : '') +
+      (r.prerelease ? '<span class="badge badge-beta">베타</span>' : '');
+    return '<section class="release">' +
+      '<div class="release-head">' +
+        '<h2>' + escapeHtml(r.name || r.tag_name) + '</h2>' + badges +
+        '<span class="release-date">' + formatDate(r.published_at) + '</span>' +
+      '</div>' +
+      '<div class="release-body">' + renderMarkdown(r.body || '') + '</div>' +
+    '</section>';
+  }).join('');
+}
+
+load();
+</script>
+</body>
+</html>
